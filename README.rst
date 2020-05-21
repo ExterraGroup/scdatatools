@@ -68,3 +68,10 @@ Read a DataForge database (.dcb)
     dcb = DataCoreBinary('research/Game.dcb.3.9.1-ptu.5229583')
     jav_records = dcb.search_filename('*javelin.xml')
     print(dcb.dump_record_json(jav_records[-1]))
+
+
+Special Thanks
+--------------
+
+A huge thanks goes out to `dolkensp <https://github.com/dolkensp/unp4k>`_ (aka alluran) for doing all the initial hard
+work reversing the P4K and DataForge file formats! This would've taken a lot longer with his efforts.

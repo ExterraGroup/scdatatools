@@ -165,7 +165,7 @@ class P4KFile(zipfile.ZipFile):
                 )
         except Exception as e:
             sys.stderr.write(
-                f"Unable to determine version of P4K file, missing or corrupt c_win_shader.id"
+                f"Warning: Unable to determine version of P4K file, missing or corrupt c_win_shader.id"
             )
 
     def fetch_version_label(self, rsi_session, force=False) -> str:
