@@ -27,6 +27,13 @@ Python API for interactive with the data files in Star Citizen.
 * Free software: MIT license
 * Documentation: https://scdatatools.readthedocs.io.
 
+Hey! Listen!
+------------
+
+This tool is in **very** early development. The CLI is a WIP and may not be completely plumbed up yet.
+If you'd like to help out and know Python, try out the API a little bit and see if you run into errors parsing
+files! We're also at the stage that feature/usability feedback would be much appreciated.
+
 
 Features
 --------
