@@ -1,0 +1,6 @@
+-e .
+sphinx
+sphinx-autodoc
+sphinx-autodoc-typehints
+setuptools-scm
+nose

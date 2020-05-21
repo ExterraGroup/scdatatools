@@ -5,9 +5,10 @@ import os
 def read_and_seek(dcb, data_type, buffer=None):
     """
     Reads a ctypes Structure from a `buffer`, then seeks the buffer to after the read data.
-    :param dcb: The `DataCoreBinary` related to this object. This will be assigned to the `_dcb` attribute on the newly
-                read `Structure`
-    :param data_type: A `ctypes` object.
+
+    :param dcb: The :class:`DataCoreBinary` related to this object. This will be assigned to the `_dcb` attribute on the newly
+        read :class:`ctypes.Structure`
+    :param data_type: A :class:`ctypes` object.
     :param buffer: The
     """
     buffer = buffer or dcb.raw_data

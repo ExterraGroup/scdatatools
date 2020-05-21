@@ -1,10 +1,3 @@
-"""
-References:
-
-- https://www.reddit.com/r/starcitizen/comments/477qvm/in_22_the_component_xmls_have_been_serialized/d0bca4e/
-- https://www.reddit.com/r/starcitizen/comments/479t1v/tools_ive_packaged_my_dataforge_converter_for/
-"""
-
 __all__ = ["DataCoreBinary"]
 
 import os
@@ -15,28 +8,10 @@ import ctypes
 import fnmatch
 from io import IOBase
 from collections import defaultdict
-from functools import cached_property
-
 
 from scdatatools.forge import dftypes
-from scdatatools.forge.records import *
 from scdatatools.forge.utils import read_and_seek
 from scdatatools.forge.dftypes.enums import DataTypes
-
-
-class DataMap:
-    def __init__(self, forge, data_map_definition, offset):
-        self.forge = forge
-        self.data_map_definition = data_map_definition
-        self.struct_definition = self.forge.struct_definitions[
-            self.data_map_definition.struct_index
-        ]
-        self.offset = offset
-
-    def size(self):
-        s = 0
-        for prop in self.struct_definition.properties:
-            pass
 
 
 class DataCoreBinaryMMap(mmap.mmap):
@@ -62,7 +37,7 @@ class DataCoreBinaryMMap(mmap.mmap):
 
 
 class DataCoreBinary:
-    def __init__(self, filename_or_data, *args, **kwargs):
+    def __init__(self, filename_or_data):
         if isinstance(filename_or_data, str):
             self.raw_data = DataCoreBinaryMMap(filename_or_data)
         else:
@@ -143,7 +118,7 @@ class DataCoreBinary:
 
         self.text = memoryview(
             self.raw_data[
-                self.raw_data.tell() : self.raw_data.tell() + self.header.text_length
+                self.raw_data.tell(): self.raw_data.tell() + self.header.text_length
             ]
         )
         self.raw_data.seek(self.header.text_length, os.SEEK_CUR)
@@ -158,7 +133,7 @@ class DataCoreBinary:
                 self.structure_instances[mapping.structure_index].append(
                     dftypes.StructureInstance(
                         self,
-                        memoryview(self.raw_data[offset : offset + struct_size]),
+                        memoryview(self.raw_data[offset: offset + struct_size]),
                         struct_def,
                     )
                 )
@@ -178,23 +153,25 @@ class DataCoreBinary:
     def dump_record_json(self, record, indent=4):
         def view_objs(obj):
             if (
-                isinstance(obj, dftypes.Reference)
-                and obj.value.value in self.records_by_guid
+                    isinstance(obj, dftypes.Reference)
+                    and obj.value.value in self.records_by_guid
             ):
-                # TODO: this shouldnt be here, im tired
+                # TODO: this probably shouldnt be here, im tired
                 obj = self.records_by_guid[obj.value.value]
 
             if isinstance(
-                obj,
-                (
-                    dftypes.StructureInstance,
-                    dftypes.WeakPointer,
-                    dftypes.ClassReference,
-                    dftypes.Record,
-                    dftypes.StrongPointer,
-                ),
+                    obj,
+                    (
+                            dftypes.StructureInstance,
+                            dftypes.WeakPointer,
+                            dftypes.ClassReference,
+                            dftypes.Record,
+                            dftypes.StrongPointer,
+                    ),
             ):
                 return {obj.name: obj.properties}
+            elif hasattr(obj, 'value'):
+                return obj.value
             else:
                 return repr(obj)
 
@@ -213,45 +190,3 @@ class DataCoreBinary:
                 if fnmatch.fnmatch(_.filename.lower(), file_filter)
             ]
         return [_ for _ in self.records if fnmatch.fnmatchcase(_.filename, file_filter)]
-
-
-count = 0
-
-
-def run_forge():
-    global count
-    import time
-
-    dcf = "research/Game.dcb.3.9.0-live.5125346"
-    print(f"\n\nLoading {dcf}")
-    print("-" * 80)
-
-    start = time.process_time()
-    f = DataCoreBinary(dcf)
-    end = time.process_time()
-    print(f"Loaded DCB in {end-start}s")
-    print(f"\nReading every property on every record...")
-    print("-" * 80)
-
-    def _iter_props(r):
-        global count
-        count += 1
-        if hasattr(r, "properties"):
-            [_iter_props(_) for _ in r.properties]
-
-    try:
-        # print_records(f)
-        start = time.process_time()
-        for r in f.records:
-            # print(f'{r.type}:{r.name} - {r.filename}')
-            count += 1
-            _iter_props(r)
-    finally:
-        end = time.process_time()
-        print(f"# Records: {len(f.records)} ")
-        print(f"# properties traversed: {count}")
-        print(f"Total Time: {end-start}s")
-
-
-if __name__ == "__main__":
-    run_forge()

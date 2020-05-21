@@ -1,7 +1,3 @@
-# from scdatatools.forge.dftypes.enums import *
-# from scdatatools.forge.dftypes.simple import *
-# from scdatatools.forge.dftypes.complex import *
-
 import enum
 import struct
 import ctypes
@@ -192,17 +188,10 @@ class DataMappingDefinition(DataCoreBase):
 class GUID(DataCoreBase):
     _fields_ = [("raw_guid", ctypes.c_byte * 16)]
 
-    @property
+    @cached_property
     def value(self):
-        if getattr(self, "_value", None) is None:
-            c, b, a, k, j, i, h, g, f, e, d = struct.unpack("<HHI8B", self.raw_guid)
-            setattr(
-                self,
-                "_value",
-                f"{a:08x}-{b:04x}-{c:04x}-{d:02x}{e:02x}-"
-                f"{f:02x}{g:02x}{h:02x}{i:02x}{j:02x}{k:02x}",
-            )
-        return getattr(self, "_value", "")
+        c, b, a, k, j, i, h, g, f, e, d = struct.unpack("<HHI8B", self.raw_guid)
+        return f"{a:08x}-{b:04x}-{c:04x}-{d:02x}{e:02x}-{f:02x}{g:02x}{h:02x}{i:02x}{j:02x}{k:02x}"
 
     def __repr__(self):
         return f"<GUID: {self.value}>"
@@ -302,7 +291,7 @@ class StructureInstance:
 class StringReference(DataCoreBase):
     _fields_ = [("string_offset", ctypes.c_uint32)]
 
-    @property
+    @cached_property
     def value(self):
         return self.dcb.string_for_offset(self.string_offset)
 

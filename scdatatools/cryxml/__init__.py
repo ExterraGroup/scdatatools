@@ -1,9 +1,10 @@
 """
+A suite of utilities for converting binary CryXMLB files to XML :class:`ElementTrees` or to a :py:obj:`dict`.
 
 References:
-    https://github.com/aws/lumberyard/blob/0b34452ef270f6b27896858dc7899c9796efb124/dev/Code/CryEngine/CryCommon/XMLBinaryHeaders.h
-    https://github.com/aws/lumberyard/blob/master/dev/Code/CryEngine/CrySystem/XML/XMLBinaryReader.cpp
-    https://github.com/dolkensp/unp4k/blob/master/src/unforge/CryXmlB/CryXmlSerializer.cs
+  - https://github.com/aws/lumberyard/blob/0b34452ef270f6b27896858dc7899c9796efb124/dev/Code/CryEngine/CryCommon/XMLBinaryHeaders.h
+  - https://github.com/aws/lumberyard/blob/master/dev/Code/CryEngine/CrySystem/XML/XMLBinaryReader.cpp
+  - https://github.com/dolkensp/unp4k/blob/master/src/unforge/CryXmlB/CryXmlSerializer.cs
 """
 
 __all__ = [
@@ -33,7 +34,7 @@ class _StandardXmlFile(Exception):
 
 
 class _CryXMLBParser:
-    """ Parsers a cryxmlb file """
+    """ Parsers a CryXMLB file """
 
     def __init__(self, target, encoding="UTF-8"):
         self.target = target
@@ -144,11 +145,11 @@ class _CryXMLBParser:
 
 class CryXMLBParser:
     """
-    Parser for CIG's lumberyard/cryengine binary XML format.
+    Parser for CIG's Lumberyard/CryEngine binary XML format.
 
     Example usage:
 
-    .. code_block:: python
+    .. code-block:: python
 
         from xml.etree import ElementTree
         et = ElementTree.parse('path/to/sc_cryxml.xml', parser=CryXMLBParser())
@@ -237,7 +238,7 @@ class CryXMLBParser:
 
 
 def etree_from_cryxml_file(source) -> ElementTree:
-    """ Continence method that converts the file `source` to an ElementTree.
+    """ Convenience method that converts the file `source` to an ElementTree.
 
     :param source: File name or file object
     """
@@ -245,7 +246,7 @@ def etree_from_cryxml_file(source) -> ElementTree:
 
 
 def dict_from_cryxml_file(source) -> dict:
-    """ Continence method that converts the file `source` to an ElementTree.
+    """ Convenience method that converts the file `source` to an ElementTree.
 
     :param source: File name or file object
     """
