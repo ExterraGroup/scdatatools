@@ -1,6 +1,5 @@
+# this must be pip installed from the project root e.g. pip install -r dev/requirements.txt
 -e .
-sphinx
-sphinx-autodoc
-sphinx-autodoc-typehints
+-r ../docs/requirements.txt
 setuptools-scm
 nose
