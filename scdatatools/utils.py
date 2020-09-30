@@ -1,5 +1,30 @@
+import sys
+import json
 from collections import defaultdict
 from xml.etree import ElementTree
+
+
+def version_from_id_file(id_file) -> (dict, str):
+    opened = False
+    if isinstance(id_file, str):
+        opened = True
+        id_file = open(id_file, 'r')
+
+    version_data = {}
+    version_label = ''
+    try:
+        version_data = json.loads(id_file.read()).get("Data", {})
+        branch = version_data.get("Branch", None)
+        version = version_data.get("RequestedP4ChangeNum", None)
+        version_label = f"{branch}-{version}"
+    except Exception as e:
+        sys.stderr.write(
+            f"Warning: Unable to determine version of P4K file, missing or corrupt c_win_shader.id"
+        )
+    finally:
+        if opened:
+            id_file.close()
+    return version_data, version_label
 
 
 # etree<->dict conversions from

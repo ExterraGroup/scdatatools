@@ -23,7 +23,7 @@ class DataTypes(IntEnum):
     Int16 = 0x0003
     Int8 = 0x0002
     Boolean = 0x0001
-    EnumOption = 0xBEEF0  # TODO: made this up cause it didnt exist
+    EnumValueName = 0xBEEF0  # TODO: made this up cause it didnt exist
     ArrayPointer = 0xBEEF1  # TODO: added for scdatatools
 
 

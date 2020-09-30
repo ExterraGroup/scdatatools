@@ -153,7 +153,7 @@ class EnumDefinition(DataCoreNamed):
         return enum.Enum(
             self.name,
             [
-                self.dcb.values[DataTypes.EnumOption][_].value
+                self.dcb.values[DataTypes.EnumValueName][_].value
                 for _ in range(
                     self.first_value_index, self.first_value_index + self.value_count
                 )
@@ -165,12 +165,8 @@ class EnumChoice(DataCoreBase):
     _fields_ = [("enum_choice_index", ctypes.c_uint32)]
 
     @property
-    def enum(self):
-        return self._enum_definition.enum
-
-    @property
     def value(self):
-        return getattr(self.enum, self.dcb.string_for_offset(self.enum_choice_index))
+        return self.dcb.string_for_offset(self.enum_choice_index)
 
 
 class DataMappingDefinition(DataCoreBase):
@@ -357,7 +353,10 @@ class WeakPointer(_Pointer, DataCoreBase):
     ]
 
     def __repr__(self):
-        return f"<WeakPointer structure:{self.structure_definition.name} instance:{self.instance_index}>"
+        try:
+            return f"<WeakPointer structure:{self.structure_definition.name} instance:{self.instance_index}>"
+        except IndexError:
+            return f"<WeakPointer structure:{self.structure_index} instance:{self.instance_index}>"
 
     @property
     def properties(self):
@@ -416,7 +415,7 @@ DATA_TYPE_LOOKUP = {
     DataTypes.StrongPointer: StrongPointer,
     # DataTypes.Class: ,
     DataTypes.EnumChoice: EnumChoice,
-    DataTypes.EnumOption: StringReference,
+    DataTypes.EnumValueName: StringReference,
     DataTypes.GUID: GUID,
     DataTypes.Locale: LocaleReference,
     DataTypes.Double: ctypes.c_double,

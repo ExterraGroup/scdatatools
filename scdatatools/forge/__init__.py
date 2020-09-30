@@ -6,7 +6,7 @@ import json
 import mmap
 import ctypes
 import fnmatch
-from io import IOBase
+from io import IOBase, FileIO
 from collections import defaultdict
 
 from scdatatools.forge import dftypes
@@ -16,7 +16,7 @@ from scdatatools.forge.dftypes.enums import DataTypes
 
 class DataCoreBinaryMMap(mmap.mmap):
     def __new__(cls, filename_or_file, *args, **kwargs):
-        if isinstance(filename_or_file, IOBase):
+        if hasattr(filename_or_file, 'fileno'):
             _ = filename_or_file
         else:
             _ = open(filename_or_file, "rb+")
@@ -111,7 +111,7 @@ class DataCoreBinary:
             DataTypes.Reference: read_and_seek(
                 self, dftypes.Reference * self.header.reference_count
             ),
-            DataTypes.EnumOption: read_and_seek(
+            DataTypes.EnumValueName: read_and_seek(
                 self, dftypes.StringReference * self.header.enum_option_name_count
             ),
         }
@@ -128,7 +128,6 @@ class DataCoreBinary:
             struct_def = self.structure_definitions[mapping.structure_index]
             struct_size = struct_def.calculated_data_size
             for i in range(mapping.structure_count):
-                # self.structure_instances[mapping.structure_index].append(self.raw_data.tell())
                 offset = self.raw_data.tell()
                 self.structure_instances[mapping.structure_index].append(
                     dftypes.StructureInstance(
@@ -151,12 +150,13 @@ class DataCoreBinary:
             return ""
 
     def dump_record_json(self, record, indent=4):
-        def view_objs(obj):
+        refs = {}
+
+        def view_objs(obj, norefs=False):
             if (
                     isinstance(obj, dftypes.Reference)
                     and obj.value.value in self.records_by_guid
             ):
-                # TODO: this probably shouldnt be here, im tired
                 obj = self.records_by_guid[obj.value.value]
 
             if isinstance(
@@ -169,13 +169,26 @@ class DataCoreBinary:
                             dftypes.StrongPointer,
                     ),
             ):
-                return {obj.name: obj.properties}
-            elif hasattr(obj, 'value'):
-                return obj.value
-            else:
-                return repr(obj)
+                conv = {obj.name: obj.properties}
+                # TODO: I don't like this, but it looks like these states can have circular references
+                if 'NextState' in conv[obj.name] and not isinstance(conv[obj.name]['NextState'], dict):
+                    try:
+                        conv[obj.name]['NextState'] = {
+                            'StateName': conv[obj.name]['NextState'].properties.StateName,
+                            'type': 'ClassReference',
+                            'StructureIndex': conv[obj.name]['NextState'].structure_index,
+                            'InstanceIndex': conv[obj.name]['NextState'].instance_index,
+                        }
+                    except AttributeError:
+                        pass
+                return conv
 
-        return json.dumps(record.properties, indent=indent, default=view_objs)
+            try:
+                return obj.value
+            except AttributeError:
+                return str(obj)
+
+        return json.dumps(record.properties, indent=indent, default=view_objs, check_circular=False)
 
     def search_filename(self, file_filter, ignore_case=True):
         """ Search the records by filename """

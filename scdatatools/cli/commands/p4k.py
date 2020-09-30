@@ -11,6 +11,9 @@ from scdatatools import p4k
 @command(help="Extract files from a P4K file")
 @argument("p4k_file", description="P4K file to unpack files from", positional=True)
 @argument("single", description="Extract first matching file only", aliases=["-1"])
+@argument("convert_cryxml",
+          description="Automatically convert CryXMLb files to JSON (the original will also be extracted)",
+          aliases=["-c"])
 @argument(
     "output",
     description="The output directory to extract files into or the output path if --single. "
@@ -26,6 +29,7 @@ def unp4k(
     p4k_file: typing.Text,
     output: typing.Text = ".",
     file_filter: typing.Text = "*",
+    convert_cryxml: bool = False,
     single: bool = False,
 ):
     output = Path(output).absolute()
@@ -37,7 +41,10 @@ def unp4k(
         sys.exit(1)
 
     print(f"Opening p4k file: {p4k_file}")
-    p = p4k.P4KFile(str(p4k_file))
+    try:
+        p = p4k.P4KFile(str(p4k_file))
+    except KeyboardInterrupt:
+        sys.exit(1)
 
     if single:
         print(f"Extracting first match for filter '{file_filter}' to {output}")
@@ -57,10 +64,13 @@ def unp4k(
                 shutil.copyfileobj(source, target)
         else:
             output.mkdir(parents=True, exist_ok=True)
-            p.extract(extract_file, path=str(output))
+            p.extract(extract_file, path=str(output), convert_cryxml=convert_cryxml)
 
     else:
         print(f"Extracting files into {output} with filter '{file_filter}'")
         print("=" * 80)
         output.mkdir(parents=True, exist_ok=True)
-        p.extract_filter(file_filter=file_filter, path=str(output))
+        try:
+            p.extract_filter(file_filter=file_filter, path=str(output), convert_cryxml=convert_cryxml)
+        except KeyboardInterrupt:
+            pass

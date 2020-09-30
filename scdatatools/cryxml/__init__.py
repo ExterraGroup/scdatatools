@@ -237,6 +237,18 @@ class CryXMLBParser:
             del self.target, self._target
 
 
+def is_cryxmlb_file(source):
+    loc = source.tell()
+    source.seek(0, 2)
+    if source.tell() < sizeof(CryXMLBHeader):
+        return False
+
+    source.seek(0)
+    header = CryXMLBHeader.from_buffer(source, 0)
+    source.seek(loc)
+    return header.signature == b"CryXmlB"
+
+
 def etree_from_cryxml_file(source) -> ElementTree:
     """ Convenience method that converts the file `source` to an ElementTree.
 

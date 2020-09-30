@@ -1,6 +1,5 @@
 import io
 import os
-import sys
 import json
 import struct
 import zipfile
@@ -9,7 +8,8 @@ import fnmatch
 import zstandard as zstd
 from Crypto.Cipher import AES
 
-from rsi.launcher import LauncherAPI
+from .cryxml import dict_from_cryxml_file
+
 
 ZIP_ZSTD = 100
 p4kFileHeader = b"PK\x03\x14"
@@ -67,11 +67,11 @@ class P4KExtFile(zipfile.ZipExtFile):
         self.mode = mode
         self.name = p4kinfo.filename
 
-        # if hasattr(p4kinfo, 'CRC'):
-        #     self._expected_crc = p4kinfo.CRC
-        #     self._running_crc = zipfile.crc32(b'')
-        # else:
-        #     self._expected_crc = None
+        if hasattr(p4kinfo, 'CRC'):
+            self._expected_crc = p4kinfo.CRC
+            self._running_crc = zipfile.crc32(b'')
+        else:
+            self._expected_crc = None
         # TODO: the CRCs don't match, but im getting the same outputs as unp4k - we should figure out what exactly is
         #   going into calculating the CRC for P4K entry
         self._expected_crc = None
@@ -143,57 +143,6 @@ class P4KFile(zipfile.ZipFile):
         # use zstd
         super().__init__(file, mode, compression=zipfile.ZIP_STORED)
         self.key = key
-        self.branch = (
-            self.build_date_stamp
-        ) = self.build_time_stamp = self.config = self.version = None
-        self.version_label = self.shelved_change = self.tag = None
-        self._fetch_label_success = False
-
-        # try to read the version info out of the file
-        try:
-            with self.open("c_win_shader.id") as f:
-                data = json.loads(f.read())["Data"]
-                self.branch = data.get("Branch", None)
-                self.build_date_stamp = data.get("BuildDateStamp", None)
-                self.build_time_stamp = data.get("BuildTimeStamp", None)
-                self.config = data.get("Config", None)
-                self.version = data.get("RequestedP4ChangeNum", None)
-                self.shelved_change = data.get("Shelved_Change", None)
-                self.tag = data.get("Tag", None)
-                self.version_label = (
-                    f"{self.branch}-{self.version}"  # better than nothing
-                )
-        except Exception as e:
-            sys.stderr.write(
-                f"Warning: Unable to determine version of P4K file, missing or corrupt c_win_shader.id"
-            )
-
-    def fetch_version_label(self, rsi_session, force=False) -> str:
-        """ Try to get the version label from the launcher API for this version. This will only work for currently
-        accessible versions. This will also set `self.version_label` to the fetched label.
-
-        :param rsi_session: An authenticated `RSISession`
-        :param force: Force update the version label even if it has successfully been fetched already.
-        """
-        if self._fetch_label_success and not force:
-            return self.version_label
-
-        launcher = LauncherAPI(session=rsi_session)
-        try:
-            for games in launcher.library["games"]:
-                if games["id"] == "SC":
-                    for version in games["channels"]:
-                        if version.get("version", None) == self.version:
-                            self.version_label = version["versionLabel"]
-                            return self.version_label
-            else:
-                sys.stderr.write(
-                    f"Could not determine version label for {self.version} "
-                    f"from library {launcher.library}"
-                )
-                return ""
-        except KeyError:
-            return ""
 
     def _RealGetContents(self):
         """Read in the table of contents for the ZIP file."""
@@ -394,13 +343,39 @@ class P4KFile(zipfile.ZipFile):
             zef_file.close()
             raise
 
-    def extract_filter(self, file_filter, path=None):
-        file_filter = "/".join(
-            file_filter.split("\\")
-        )  # normalize path slashes from windows to posix
-        # TODO: handle ignore case flag?
-        members = fnmatch.filter(self.namelist(), file_filter)
-        self.extractall(path=path, members=members)
+    def extract_filter(self, file_filter, path=None, ignore_case=False, convert_cryxml=False):
+        self.extractall(path=path, members=self.search(file_filter, ignore_case=ignore_case),
+                        convert_cryxml=convert_cryxml)
+
+    def extract(self, member, path=None, pwd=None, convert_cryxml=False):
+        """Extract a member from the archive to the current working directory,
+           using its full name. Its file information is extracted as accurately
+           as possible. `member' may be a filename or a ZipInfo object. You can
+           specify a different directory using `path'.
+        """
+        if path is None:
+            path = os.getcwd()
+        else:
+            path = os.fspath(path)
+
+        return self._extract_member(member, path, pwd, convert_cryxml=convert_cryxml)
+
+    def extractall(self, path=None, members=None, pwd=None, convert_cryxml=False):
+        """Extract all members from the archive to the current working
+           directory. `path' specifies a different directory to extract to.
+           `members' is optional and must be a subset of the list returned
+           by namelist().
+        """
+        if members is None:
+            members = self.namelist()
+
+        if path is None:
+            path = os.getcwd()
+        else:
+            path = os.fspath(path)
+
+        for zipinfo in members:
+            self._extract_member(zipinfo, path, pwd, convert_cryxml=convert_cryxml)
 
     def search(self, file_filter, ignore_case=True):
         """ Search the filelist by path """
@@ -409,26 +384,40 @@ class P4KFile(zipfile.ZipFile):
         )  # normalize path slashes from windows to posix
         if ignore_case:
             file_filter = file_filter.lower()
-            return [
-                _
-                for _ in self.filelist
-                if fnmatch.fnmatch(_.filename.lower(), file_filter)
-            ]
-        return [
-            _ for _ in self.filelist if fnmatch.fnmatchcase(_.filename, file_filter)
-        ]
+        return list(fnmatch.filter(self.namelist(), file_filter))
 
-    def _extract_member(self, member, targetpath, pwd):
+    def _extract_member(self, member, targetpath, pwd, convert_cryxml=False):
+        """Extract the ZipInfo object 'member' to a physical
+           file on the path targetpath.
+        """
         if not isinstance(member, P4KInfo):
             member = self.getinfo(member)
 
         # TODO: handle not overwriting existing files flag?
 
+        # TODO: change this to use python logging so it can be easily shut off
         print(
             f"{compressor_names[member.compress_type]} | "
             f'{"Crypt" if member.is_encrypted else "Plain"} | {member.filename}'
         )
-        super()._extract_member(member, targetpath, pwd)
+        targetpath = super()._extract_member(member, targetpath, pwd)
+
+        # Also convert the file to JSON if it's a CryXML file
+        if member.filename.lower().endswith('xml') and convert_cryxml:
+            try:
+                with open(targetpath, 'rb') as t:
+                    if t.read(7) == b'CryXmlB':
+                        t.seek(0)
+                        convertpath = targetpath[:-3] + 'json'
+                        data = dict_from_cryxml_file(t)
+                        if data is not None:
+                            with open(convertpath, 'w') as o:
+                                print(f"{compressor_names[member.compress_type]} | Converterted | {convertpath}")
+                                json.dump(data, o, indent=4, sort_keys=True)
+            except IOError:
+                pass
+
+        return targetpath
 
 
 if __name__ == "__main__":
