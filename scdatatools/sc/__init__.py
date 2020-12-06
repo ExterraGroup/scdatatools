@@ -64,9 +64,9 @@ class StarCitizen:
         return self._localization
 
     @property
-    def profile(self):
+    def default_profile(self):
         if self._profile is None:
-            self._profile = Profile(self)
+            self._profile = Profile(self, 'Data/Libs/Config/defaultProfile.xml')
         return self._profile
 
     @property

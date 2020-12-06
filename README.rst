@@ -47,7 +47,6 @@ CLI Examples
 
 .. code-block:: bash
 
-    scdt --help
     usage: scdt [-h] [--verbose] [--stderr] [--command-timeout COMMAND_TIMEOUT] [command] ...
 
     positional arguments:
@@ -56,18 +55,30 @@ CLI Examples
         cryxml-to-xml       Convert a CryXML file to xml
         unforge             Convert a DataForge file to a readable format
         unp4k               Extract files from a P4K file
+        actionmap           Dumps the default profile action map (keybinds) as JSON
+
 
 API Examples
 ------------
 
 Read a DataForge database (.dcb)
 
-.. code-block:: bash
+.. code-block:: python
 
     from scdatatools.forge import DataCoreBinary
     dcb = DataCoreBinary('research/Game.dcb.3.9.1-ptu.5229583')
     jav_records = dcb.search_filename('*javelin.xml')
     print(dcb.dump_record_json(jav_records[-1]))
+
+
+Use the `StarCitizen` class:
+
+.. code-block:: python
+
+    from scdatatools.sc import StarCitizen
+    sc = StarCitizen('D:/Path/To/LIVE')
+    sc.p4k.search('idris')
+    sc.datacore.records[0]
 
 
 Special Thanks
