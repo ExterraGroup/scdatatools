@@ -13,14 +13,14 @@ with open('HISTORY.rst') as history_file:
 
 requirements = [
     "pyrsi~=0.1.0",
-    "pycryptodome==3.9.4",
-    "zstandard==0.12.0",
+    "pycryptodome~=3.9.0",
+    "zstandard~=0.12.0",
     "python-nubia==0.2b2",
-    "ipython==7.14.0"
+    "ipython"
 ]
 
 setup_requirements = [
-    "setuptools-scm==3.5.0",
+    "setuptools-scm",
     "sphinx==3.0.3"
 ]
 
@@ -80,6 +80,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ExterraGroup/scdatatools',
-    version='0.1.3',
+    version='0.1.4',
     zip_safe=True,
 )
