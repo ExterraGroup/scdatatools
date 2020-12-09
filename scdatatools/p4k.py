@@ -1,9 +1,11 @@
 import io
+import re
 import os
 import json
 import struct
 import zipfile
 import fnmatch
+from pathlib import Path, PureWindowsPath
 
 import zstandard as zstd
 from Crypto.Cipher import AES
@@ -382,9 +384,8 @@ class P4KFile(zipfile.ZipFile):
         file_filter = "/".join(
             file_filter.split("\\")
         )  # normalize path slashes from windows to posix
-        if ignore_case:
-            file_filter = file_filter.lower()
-        return list(fnmatch.filter(self.namelist(), file_filter))
+        r = re.compile(fnmatch.translate(file_filter), flags=re.IGNORECASE if ignore_case else 0)
+        return [filename for filename in self.namelist() if r.match(PureWindowsPath(filename).as_posix())]
 
     def _extract_member(self, member, targetpath, pwd, convert_cryxml=False):
         """Extract the ZipInfo object 'member' to a physical
