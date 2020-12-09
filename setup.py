@@ -80,6 +80,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/ExterraGroup/scdatatools',
-    version='0.1.4',
+    version='0.1.5',
     zip_safe=True,
 )
