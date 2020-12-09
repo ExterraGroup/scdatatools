@@ -5,7 +5,7 @@ import json
 import struct
 import zipfile
 import fnmatch
-from pathlib import Path, PureWindowsPath
+from pathlib import Path
 
 import zstandard as zstd
 from Crypto.Cipher import AES
@@ -92,7 +92,9 @@ class P4KExtFile(zipfile.ZipExtFile):
 
 class P4KInfo(zipfile.ZipInfo):
     def __init__(self, *args, **kwargs):
+        # ensure posix file paths as specified by the Zip format
         super().__init__(*args, **kwargs)
+        self.filename = self.filename.replace('\\', "/")
         self.is_encrypted = False
 
     def _decodeExtra(self):
@@ -385,7 +387,7 @@ class P4KFile(zipfile.ZipFile):
             file_filter.split("\\")
         )  # normalize path slashes from windows to posix
         r = re.compile(fnmatch.translate(file_filter), flags=re.IGNORECASE if ignore_case else 0)
-        return [filename for filename in self.namelist() if r.match(PureWindowsPath(filename).as_posix())]
+        return [filename for filename in self.namelist() if r.match(Path(filename).as_posix())]
 
     def _extract_member(self, member, targetpath, pwd, convert_cryxml=False):
         """Extract the ZipInfo object 'member' to a physical
